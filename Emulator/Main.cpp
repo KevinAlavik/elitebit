@@ -1,6 +1,7 @@
 #include "Emulator.hpp"
 #include "Bus.hpp"
 #include "Memory.hpp"
+#include "EB16.hpp"
 
 #include <iostream>
 #include <memory>
@@ -11,45 +12,45 @@ std::shared_ptr<spdlog::logger> Emulator::logger = nullptr;
 int main()
 {
     Emulator::initializeLogger();
-
+    std::unique_ptr<EB16::CPU> cpu;
     try
     {
-        Bus::Bus bus;
+        std::unique_ptr<Bus::Bus> bus = std::make_unique<Bus::Bus>();
 
-        uint8_t rom_data[] = {0x69};
+        uint8_t rom_data[] = {
+            // NOP (No operation)
+            0x00, // NOP
 
-        auto boot_rom = std::make_shared<Memory::MemoryDevice>(0x0000, 0x1FFF, rom_data, 0x2000);
-        auto extended_rom = std::make_shared<Memory::MemoryDevice>(0x2000, 0x3FFF, nullptr, 0x0);
-        auto ram = std::make_shared<Memory::MemoryDevice>(0x4000, 0xFFFF, nullptr, 0x0);
+            // LDX_IMM (Load immediate value into X register)
+            0x02, 0x42, // LDX 0x42
 
-        bus.attachDevice(boot_rom, Bus::Permission::Read);
-        bus.attachDevice(extended_rom, Bus::Permission::Read);
-        bus.attachDevice(ram, Bus::Permission::Read | Bus::Permission::Write);
+            // MOV (Move value from one register to another)
+            0x08, 0x00, 0x01, // MOV X, Y
+
+            // HLT (Halt execution)
+            0x01 // HLT
+        };
+
+        auto boot_rom = std::make_shared<Memory::MemoryDevice>(0x0000, 0x1FFF, rom_data, sizeof(rom_data));
+
+        auto extended_rom = std::make_shared<Memory::MemoryDevice>(0x2000, 0x3FFF, nullptr, 0);
+        auto ram = std::make_shared<Memory::MemoryDevice>(0x4000, 0xFFFF, nullptr, 0);
+
+        bus->attachDevice(boot_rom, Bus::Permission::Read);
+        bus->attachDevice(extended_rom, Bus::Permission::Read);
+        bus->attachDevice(ram, Bus::Permission::Read | Bus::Permission::Write);
 
         Emulator::logger->info("Running eb16");
 
-        // Test loop
-        bool quit = false;
-        uint16_t pc = 0x0000;
-        while (!quit)
-        {
-            uint8_t opcode = bus.read(pc);
-            Emulator::logger->info("Executing opcode 0x{:02X} at PC 0x{:04X}", opcode, pc);
-
-            if (opcode == 0x00) // Halt
-            {
-                quit = true;
-                break;
-            }
-
-            pc += 1;
-        }
-
+        cpu = std::make_unique<EB16::CPU>(*bus);
+        cpu->run();
         Emulator::logger->info("Finished running eb16");
+        cpu->dump();
     }
     catch (const std::exception &e)
     {
         Emulator::logger->error("Error: {}", e.what());
+        cpu->dump();
     }
 
     return 0;
