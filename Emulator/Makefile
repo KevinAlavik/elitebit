@@ -2,8 +2,8 @@ PACKAGE_NAME := elitebit-emulator
 PACKAGE_VERSION := 0.0.1
 
 CXX := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -Wno-unused-parameter -O2 $(shell pkg-config --cflags sdl3) $(shell pkg-config --cflags sdl3-image)
-LDFLAGS := $(shell pkg-config --libs sdl3) $(shell pkg-config --libs sdl3-image)
+CXXFLAGS := -std=c++17 -Wall -Wextra -Wno-unused-parameter -O2 -I. $(shell pkg-config --cflags spdlog)
+LDFLAGS := $(shell pkg-config --libs spdlog)
 
 prefix := /usr/local
 exec_prefix := $(prefix)
@@ -16,7 +16,7 @@ BUILD_DIR := build
 BIN_DIR := bin
 TARGET := $(BIN_DIR)/$(PACKAGE_NAME)
 
-SRCS := Main.cpp
+SRCS := Main.cpp Bus.cpp Memory.cpp
 OBJS := $(patsubst %.cpp, $(BUILD_DIR)/%.o, $(SRCS))
 
 .PHONY: all clean install uninstall
